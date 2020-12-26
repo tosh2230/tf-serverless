@@ -1,4 +1,5 @@
 import os
+import io
 import logging
 import urllib
 from typing import Tuple
@@ -14,7 +15,7 @@ logger.setLevel(logging.INFO)
 
 # boto3 session
 session = boto3.Session()
-s3 = session.client("s3")
+s3 = session.resource("s3")
 
 
 def lambda_handler(event, context):
@@ -61,11 +62,13 @@ def read_s3_event(event: dict) -> Tuple[str, str]:
 
 
 def get_s3_data(bucket: str, key: str) -> str:
-    return s3.get_object(Bucket=bucket, Key=key)["Body"].read()
+    return (
+        s3.meta.client.get_object(Bucket=bucket, Key=key)["Body"].read().decode("utf-8")
+    )
 
 
 def make_df(body: str) -> pd.DataFrame:
-    return pd.read_csv(body, encoding="utf-8", header=0)
+    return pd.read_csv(io.StringIO(body), encoding="utf-8", header=0)
 
 
 def create_pq(df: pd.DataFrame, path: str) -> None:
@@ -73,5 +76,4 @@ def create_pq(df: pd.DataFrame, path: str) -> None:
 
 
 def upload_file(path: str, bucket: str, key: str) -> dict:
-    with open(path) as f:
-        return s3.put_object(Body=f.read(), Bucket=bucket, Key=key)
+    return s3.Bucket(bucket).upload_file(Filename=path, Key=key)

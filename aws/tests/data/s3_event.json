@@ -20,14 +20,14 @@
                 "s3SchemaVersion": "1.0",
                 "configurationId": "ID found in the bucket notification configuration",
                 "bucket": {
-                    "name": "test-bucket",
+                    "name": "tf-serverless-tosh2230",
                     "ownerIdentity": {
                         "principalId": "Amazon-customer-ID-of-the-bucket-owner"
                     },
                     "arn": "bucket-ARN"
                 },
                 "object": {
-                    "key": "test-key",
+                    "key": "c01.csv",
                     "size": "0",
                     "eTag": "object eTag",
                     "versionId": "object version if bucket is versioning-enabled, otherwise null",

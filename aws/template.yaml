@@ -1,0 +1,54 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  SAM Template for tf-serverless
+
+Globals:
+  Function:
+    Timeout: 10
+
+Resources:
+  SrcBucket:
+    Type: AWS::S3::Bucket
+    Properties: 
+      AccessControl: Private
+      BucketName: tf-serverless-tosh2230
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  FunctionPqConverter:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/
+      Handler: pq_converter.lambda_handler
+      Runtime: python3.8
+      MemorySize: 1024
+      Layers:
+        - !Ref LayerPandasPyArrow
+      Events:
+        S3Event:
+          Type: S3
+          Properties:
+            Bucket: !Ref SrcBucket
+            Events: s3:ObjectCreated:*
+
+  LayerPandasPyArrow:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      Description: Pandas & PyArrow
+      ContentUri: 'layer/pandas-pyarrow/'
+      CompatibleRuntimes:
+        - python3.8
+    Metadata:
+      BuildMethod: python3.8
+
+Outputs:
+  FunctionPqConverter:
+    Description: "FunctionPqConverter ARN"
+    Value: !GetAtt FunctionPqConverter.Arn
+  FunctionPqConverterIamRole:
+    Description: "Implicit IAM Role created for FunctionPqConverter"
+    Value: !GetAtt FunctionPqConverterRole.Arn
