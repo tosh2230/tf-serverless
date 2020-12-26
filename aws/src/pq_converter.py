@@ -34,19 +34,22 @@ def lambda_handler(event, context):
         アップロードリクエスト結果
     """
     try:
+        bucket: str
+        csv_key: str
         bucket, csv_key = read_s3_event(event=event)
-        csv_body = get_s3_data(bucket=bucket, key=csv_key)
-        df = make_df(body=csv_body)
+        csv_body: str = get_s3_data(bucket=bucket, key=csv_key)
+        df: pd.DataFrame = make_df(body=csv_body)
 
-        pq_key = csv_key.replace("csv", "parquet")
-        pq_name = pq_key.split("/")[-1]
-        pq_tmp_path = f"/tmp/{pq_name}"
+        pq_key: str = csv_key.replace("csv", "parquet")
+        pq_name: str = pq_key.split("/")[-1]
+        pq_tmp_path: str = f"/tmp/{pq_name}"
         create_pq(df=df, path=pq_tmp_path)
 
         return upload_file(path=pq_tmp_path, bucket=bucket, key=pq_key)
 
     except Exception as e:
         logger.exception(e)
+        raise e
 
 
 def read_s3_event(event: dict) -> Tuple[str, str]:
