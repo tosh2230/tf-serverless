@@ -23,9 +23,9 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: src/
-      Handler: pq_converter.lambda_handler
+      Handler: handler.lambda_handler
       Runtime: python3.8
-      MemorySize: 1024
+      MemorySize: 128
       Layers:
         - !Ref LayerPandasPyArrow
       Events:

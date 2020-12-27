@@ -13,67 +13,51 @@ import pyarrow.parquet as pq
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-# boto3 session
-session = boto3.Session()
-s3 = session.resource("s3")
 
+class LambdaProcessor(object):
+    def __init__(self, event, context, s3):
+        self.event = event
+        self.context = context
+        self.s3 = s3
 
-def lambda_handler(event, context):
-    """
-    csvファイルをparquetファイルに変換する
+    def main(self):
+        try:
+            bucket: str
+            csv_key: str
+            bucket, csv_key = self.read_s3_event(event=self.event)
+            csv_body: str = self.get_s3_data(bucket=bucket, key=csv_key)
+            df: pd.DataFrame = self.make_df(body=csv_body)
 
-    Parameters
-    ----------
-    event : dict
-        トリガーイベント情報
-    context : dict
-        実行環境情報
+            pq_key: str = csv_key.replace("csv", "parquet")
+            pq_name: str = pq_key.split("/")[-1]
+            pq_tmp_path: str = f"/tmp/{pq_name}"
+            self.create_pq(df=df, path=pq_tmp_path)
 
-    Returns
-    ----------
-    response : dict
-        アップロードリクエスト結果
-    """
-    try:
-        bucket: str
-        csv_key: str
-        bucket, csv_key = read_s3_event(event=event)
-        csv_body: str = get_s3_data(bucket=bucket, key=csv_key)
-        df: pd.DataFrame = make_df(body=csv_body)
+            return self.upload_file(path=pq_tmp_path, bucket=bucket, key=pq_key)
 
-        pq_key: str = csv_key.replace("csv", "parquet")
-        pq_name: str = pq_key.split("/")[-1]
-        pq_tmp_path: str = f"/tmp/{pq_name}"
-        create_pq(df=df, path=pq_tmp_path)
+        except Exception as e:
+            logger.exception(e)
+            raise e
 
-        return upload_file(path=pq_tmp_path, bucket=bucket, key=pq_key)
+    def read_s3_event(self, event: dict) -> Tuple[str, str]:
+        bucket = event["Records"][0]["s3"]["bucket"]["name"]
+        key = urllib.parse.unquote_plus(
+            event["Records"][0]["s3"]["object"]["key"], encoding="utf-8"
+        )
+        return bucket, key
 
-    except Exception as e:
-        logger.exception(e)
-        raise e
+    def get_s3_data(self, bucket: str, key: str) -> str:
+        return (
+            self.s3.meta.client.get_object(Bucket=bucket, Key=key)["Body"]
+            .read()
+            .decode("utf-8")
+        )
 
+    def make_df(self, body: str) -> pd.DataFrame:
+        return pd.read_csv(io.StringIO(body), encoding="utf-8", header=0)
 
-def read_s3_event(event: dict) -> Tuple[str, str]:
-    bucket = event["Records"][0]["s3"]["bucket"]["name"]
-    key = urllib.parse.unquote_plus(
-        event["Records"][0]["s3"]["object"]["key"], encoding="utf-8"
-    )
-    return bucket, key
+    def create_pq(self, df: pd.DataFrame, path: str) -> None:
+        pq.write_table(pa.Table.from_pandas(df), path, compression="snappy")
 
-
-def get_s3_data(bucket: str, key: str) -> str:
-    return (
-        s3.meta.client.get_object(Bucket=bucket, Key=key)["Body"].read().decode("utf-8")
-    )
-
-
-def make_df(body: str) -> pd.DataFrame:
-    return pd.read_csv(io.StringIO(body), encoding="utf-8", header=0)
-
-
-def create_pq(df: pd.DataFrame, path: str) -> None:
-    pq.write_table(pa.Table.from_pandas(df), path, compression="snappy")
-
-
-def upload_file(path: str, bucket: str, key: str) -> dict:
-    return s3.Bucket(bucket).upload_file(Filename=path, Key=key)
+    def upload_file(self, path: str, bucket: str, key: str) -> dict:
+        self.s3.Bucket(bucket).upload_file(Filename=path, Key=key)
