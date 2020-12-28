@@ -1,9 +1,39 @@
 #!/bin/bash
 
-docker-compose up -d
-aws s3 --endpoint-url=http://localhost:4566 mb s3://tf-serverless-tosh2230 --profile=localstack --cli-connect-timeout 6000
-aws s3 --endpoint-url=http://localhost:4566 cp ./tests/data/c01.csv s3://tf-serverless-tosh2230 --profile=localstack --cli-connect-timeout 6000
+# ENDPOINT_IP=Please set your private ip-address('localhost' doesn't work)
+ENDPOINT_PORT=4566
+BUCKET_NAME=tf-serverless-tosh2230
+TEST_DATA_PATH=./tests/data/c01.csv
+TEST_EVENT_PATH=./tests/data/s3_event.json
 
+# Setup Localstack
+docker-compose up -d
+
+NETWORK_ID=$(docker network ls | awk '/.+aws_default.+/' | awk '{print substr($0, 0, 13)}')
+echo NETWORK_ID=${NETWORK_ID}
+
+# Wait docker-compose up
+sleep 15
+
+# Make a S3 bucket and put test data
+aws s3 --endpoint-url=http://${ENDPOINT_IP}:${ENDPOINT_PORT} mb s3://${BUCKET_NAME} --profile=localstack --cli-connect-timeout 6000
+aws s3 --endpoint-url=http://${ENDPOINT_IP}:${ENDPOINT_PORT} cp ${TEST_DATA_PATH} s3://${BUCKET_NAME} --profile=localstack --cli-connect-timeout 6000
+
+# Unit Testing
+pytest -v
+
+# Create env-file
+printf '{
+    "Parameters": {
+        "ENDPOINT": "localstack",
+        "ENDPOINT_URL": "http://%s:%s"
+    }
+}' ${ENDPOINT_IP} ${ENDPOINT_PORT} | jq > ./vars.json
+
+# Interface Testing
 sam build --use-container
-sam local invoke FunctionPqConverter --event ./tests/data/s3_event.json  --profile=localstack  --docker-network 36189632d3e9
-docker-compose stop
+sam local invoke FunctionPqConverter --event ${TEST_EVENT_PATH} --profile=localstack  --docker-network ${NETWORK_ID} --env-vars vars.json --debug
+
+# Remove Localstack
+rm -f ./vars.json
+docker-compose down -v

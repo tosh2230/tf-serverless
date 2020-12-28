@@ -5,7 +5,10 @@ Description: >
 
 Globals:
   Function:
-    Timeout: 10
+    Environment:
+      Variables: 
+        ENDPOINT: ""
+        ENDPOINT_URL: ""
 
 Resources:
   SrcBucket:
@@ -26,6 +29,7 @@ Resources:
       Handler: handler.lambda_handler
       Runtime: python3.8
       MemorySize: 128
+      Timeout: 60
       Layers:
         - !Ref LayerPandasPyArrow
       Events:
