@@ -16,6 +16,6 @@ else:
     s3 = session.resource("s3")
 
 
-def lambda_handler(event, context):
+def lambda_handler(event, context) -> dict:
     processor = LambdaProcessor(event=event, context=context, s3=s3)
-    processor.main()
+    return processor.main()

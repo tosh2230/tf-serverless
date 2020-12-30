@@ -28,7 +28,7 @@ Resources:
       CodeUri: src/
       Handler: handler.lambda_handler
       Runtime: python3.8
-      MemorySize: 128
+      MemorySize: 256
       Timeout: 60
       Layers:
         - !Ref LayerPandasPyArrow

@@ -20,7 +20,7 @@ class LambdaProcessor(object):
         self.context = context
         self.s3 = s3
 
-    def main(self):
+    def main(self) -> dict:
         try:
             bucket: str
             csv_key: str
@@ -32,8 +32,13 @@ class LambdaProcessor(object):
             pq_name: str = pq_key.split("/")[-1]
             pq_tmp_path: str = f"/tmp/{pq_name}"
             self.create_pq(df=df, path=pq_tmp_path)
+            self.upload_file(path=pq_tmp_path, bucket=bucket, key=pq_key)
 
-            return self.upload_file(path=pq_tmp_path, bucket=bucket, key=pq_key)
+            return {
+                "StatusCode": 200,
+                "Bucket": bucket,
+                "Key": pq_key
+            }
 
         except Exception as e:
             logger.exception(e)

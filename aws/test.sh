@@ -7,6 +7,8 @@ TEST_DATA_PATH=./tests/data/c01.csv
 TEST_EVENT_PATH=./tests/data/s3_event.json
 
 # Setup Localstack
+TMPDIR=/private$TMPDIR \
+DATA_DIR=/tmp/localstack/data \
 docker-compose up -d
 
 NETWORK_ID=$(docker network ls | awk '/.+aws_default.+/' | awk '{print substr($0, 0, 13)}')
@@ -32,8 +34,10 @@ printf '{
 
 # Interface Testing
 sam build --use-container
-sam local invoke FunctionPqConverter --event ${TEST_EVENT_PATH} --profile=localstack  --docker-network ${NETWORK_ID} --env-vars vars.json --debug
+sam local invoke FunctionPqConverter --event ${TEST_EVENT_PATH} --profile=localstack  --docker-network ${NETWORK_ID} --env-vars vars.json --log-file test.log
 
 # Remove Localstack
 rm -f ./vars.json
+TMPDIR=/private$TMPDIR \
+DATA_DIR=/tmp/localstack/data \
 docker-compose down -v
