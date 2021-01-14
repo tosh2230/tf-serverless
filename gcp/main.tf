@@ -19,10 +19,10 @@ resource "google_storage_bucket" "csv_bucket" {
   storage_class = "REGIONAL"
 }
 
-data "archive_file" "function_archive" {
+data "archive_file" "py_function_archive" {
   type        = "zip"
-  source_dir  = "src"
-  output_path = "zip/functions.zip"
+  source_dir  = "src/python/pq-converter"
+  output_path = "zip/python/pq-converter.zip"
 }
 
 resource "google_storage_bucket" "zip_bucket" {
@@ -31,18 +31,18 @@ resource "google_storage_bucket" "zip_bucket" {
   storage_class = "REGIONAL"
 }
 
-resource "google_storage_bucket_object" "packages" {
-  name   = "packages/functions.${data.archive_file.function_archive.output_md5}.zip"
+resource "google_storage_bucket_object" "py_packages" {
+  name   = "packages/python/pq-converter.${data.archive_file.py_function_archive.output_md5}.zip"
   bucket = google_storage_bucket.zip_bucket.name
-  source = data.archive_file.function_archive.output_path
+  source = data.archive_file.py_function_archive.output_path
 }
 
-resource "google_cloudfunctions_function" "function" {
+resource "google_cloudfunctions_function" "pq-converter" {
   name                  = "pq-converter"
   description           = "convert from csv to parquet"
   runtime               = "python37"
   source_archive_bucket = google_storage_bucket.zip_bucket.name
-  source_archive_object = google_storage_bucket_object.packages.name
+  source_archive_object = google_storage_bucket_object.py_packages.name
   available_memory_mb   = 128
   timeout               = 30
   entry_point           = "handler"
