@@ -1,6 +1,3 @@
-# https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/cloudfunctions_function
-# https://qiita.com/nii_yan/items/c03871ec252b12fb238d
-
 provider "google" {
   version = "3.52.0"
   project = var.project
@@ -37,6 +34,7 @@ resource "google_storage_bucket_object" "py_packages" {
   source = data.archive_file.py_function_archive.output_path
 }
 
+# https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/cloudfunctions_function
 resource "google_cloudfunctions_function" "pq-converter" {
   name                  = "pq-converter"
   description           = "convert from csv to parquet"
@@ -46,12 +44,31 @@ resource "google_cloudfunctions_function" "pq-converter" {
   available_memory_mb   = 128
   timeout               = 30
   entry_point           = "handler"
-  # https://cloud.google.com/functions/docs/calling/
+  service_account_email = google_service_account.sa.email
   event_trigger {
+    # https://cloud.google.com/functions/docs/calling/
     event_type = "google.storage.object.finalize"
     resource   = google_storage_bucket.csv_bucket.name
     failure_policy {
       retry = false
     }
   }
+}
+
+resource "google_service_account" "sa" {
+  account_id   = "pq-converter"
+  display_name = "pq-converter"
+}
+
+resource "google_project_iam_member" "cloud_storage_admin" {
+  role   = "roles/storage.objectAdmin"
+  member = "serviceAccount:${google_service_account.sa.email}"
+}
+
+resource "google_cloudfunctions_function_iam_member" "member" {
+  project        = google_cloudfunctions_function.pq-converter.project
+  region         = google_cloudfunctions_function.pq-converter.region
+  cloud_function = google_cloudfunctions_function.pq-converter.name
+  role           = "roles/cloudfunctions.invoker"
+  member         = "serviceAccount:${google_service_account.sa.email}"
 }
