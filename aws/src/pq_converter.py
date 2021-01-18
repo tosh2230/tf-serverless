@@ -1,6 +1,7 @@
 import os
 import io
 import logging
+import tempfile
 import urllib
 from typing import Tuple
 
@@ -30,9 +31,11 @@ class LambdaProcessor(object):
 
             pq_key: str = csv_key.replace("csv", "parquet")
             pq_name: str = pq_key.split("/")[-1]
-            pq_tmp_path: str = f"/tmp/{pq_name}"
-            self.create_pq(df=df, path=pq_tmp_path)
-            self.upload_file(path=pq_tmp_path, bucket=bucket, key=pq_key)
+
+            with tempfile.TemporaryDirectory() as tmp_dir:
+                pq_tmp_path: str = f"{tmp_dir}/{pq_name}"
+                self.create_pq(df=df, path=pq_tmp_path)
+                self.upload_file(path=pq_tmp_path, bucket=bucket, key=pq_key)
 
             return {
                 "StatusCode": 200,
