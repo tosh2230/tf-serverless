@@ -22,7 +22,7 @@ Resources:
             Path: /hello
             Method: get
     Metadata:
-      DockerTag: ruby2.7-v1
+      DockerTag: ruby2.7-v1-custom
       DockerContext: ./hello_world
       Dockerfile: Dockerfile
 
