@@ -166,3 +166,5 @@ terraform.rc
 *.tfbackend
 **/zip/*
 gcp/src/ruby/helloworld/build.sh
+
+.ruby-version
