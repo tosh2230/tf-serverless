@@ -1,7 +1,7 @@
 source "https://rubygems.org"
 
-gem "rack", "~>2.2.8.1"
-gem "sinatra", "~>2.2"
+gem "rack", "~>3.1.8"
+gem "sinatra", "~>4.1"
 
 group :test do
   gem "rack-test"
